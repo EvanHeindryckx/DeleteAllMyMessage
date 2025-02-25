@@ -43,6 +43,8 @@ Ce script permet de **supprimer uniquement vos messages** (et non ceux de l’au
 ## Le script complet
 
 ```js
+// @Say
+
 // ----------------------------------------------------
 // (1) Fonction utilitaire pour marquer une pause
 // ----------------------------------------------------
@@ -184,10 +186,11 @@ async function deleteAllMyMessagesInAllConversations() {
 }
 
 // ----------------------------------------------------
-// (4) Lancement du script
+// (4) Pour lancer la suppression dans TOUTES les conversations :
 // ----------------------------------------------------
-// - Pour supprimer UNIQUEMENT VOS messages dans TOUTES les conversations :
 // deleteAllMyMessagesInAllConversations();
-//
-// - Pour supprimer UNIQUEMENT VOS messages dans la conversation actuelle :
+
+// ----------------------------------------------------
+// (5) Pour ne supprimer QUE VOS messages dans la conversation actuelle :
+// ----------------------------------------------------
 // deleteMyMessagesInCurrentConversation();
