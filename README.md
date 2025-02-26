@@ -44,6 +44,7 @@ Ce script permet de **supprimer uniquement vos messages** (et non ceux de l’au
 ## Le script complet
 
 ```js
+// @Say
 /******************************************************
  * (A) Petite fonction utilitaire pour marquer une pause
  ******************************************************/
