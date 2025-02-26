@@ -11,8 +11,8 @@ function delay(ms) {
  * (B) Scroller la liste de conversations pour tout charger
  *     sans quitter la page.
  ******************************************************/
-async function loadAllConversationsSPA() {
-  console.log("Chargement de toutes les conversations (SPA)...");
+async function loadAllConversations() {
+  console.log("Chargement de toutes les conversations ...");
   
   // Hypothèse : la liste de conversations est un <div aria-label="Discussions" role="grid">
   let conversationList = document.querySelector("div[aria-label='Discussions'][role='grid']");
@@ -55,8 +55,8 @@ async function loadAllConversationsSPA() {
  * (C) Scroller la conversation pour charger tous les messages
  *     en restant sur la même page (scrollTop = 0).
  ******************************************************/
-async function loadAllMessagesSPA() {
-  console.log("Chargement de tous les messages de cette conversation (SPA)...");
+async function loadAllMessages() {
+  console.log("Chargement de tous les messages de cette conversation ...");
 
   // Hypothèse : le conteneur de la conversation est un <div aria-label="Discussions" role="grid">
   // (souvent le même que pour la liste, mais la partie "droite" du DOM est parfois distincte)
@@ -85,7 +85,7 @@ async function loadAllMessagesSPA() {
     }
     lastScrollTop = conversationWindow.scrollTop;
   }
-  console.log("Fin du chargement des messages (SPA).");
+  console.log("Fin du chargement des messages.");
 }
 
 /******************************************************
@@ -177,9 +177,9 @@ async function deleteMyMessagesInCurrentConversation() {
 /******************************************************
  * (E) Parcourir toutes les conversations dans la même page
  ******************************************************/
-async function deleteAllMyMessagesInAllConversationsSPA() {
+async function deleteAllMyMessagesInAllConversations() {
   // 1) Charger toutes les conversations (scroll)
-  let convLinks = await loadAllConversationsSPA();
+  let convLinks = await loadAllConversations();
   console.log("Liste des conversations trouvées :", convLinks.length);
 
   // 2) Parcourir chaque conversation
@@ -193,7 +193,7 @@ async function deleteAllMyMessagesInAllConversationsSPA() {
     await delay(2000);
 
     // (c) Charger tous les messages (scroll vers le haut)
-    await loadAllMessagesSPA();
+    await loadAllMessages();
 
     // (d) Supprimer vos messages
     await deleteMyMessagesInCurrentConversation();
@@ -202,11 +202,11 @@ async function deleteAllMyMessagesInAllConversationsSPA() {
     //     car parfois Messenger reconstruit le DOM
     //     On retient le convLinks[i+1] qu’on doit cliquer
     //     Mais ce n’est plus le même objet DOM => On doit le re-sélectionner
-    //     OU on retente "loadAllConversationsSPA()" pour tout recharger
-    convLinks = await loadAllConversationsSPA();
+    //     OU on retente "loadAllConversations()" pour tout recharger
+    convLinks = await loadAllConversations();
     // S’il n’y a plus de conv ou si i+1 >= convLinks.length, on arrête la boucle
     if (i + 1 >= convLinks.length) break;
   }
 
-  console.log("Terminé : toutes les conversations ont été traitées (SPA).");
+  console.log("Terminé : toutes les conversations ont été traitées.");
 }
