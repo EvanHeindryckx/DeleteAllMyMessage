@@ -8,23 +8,23 @@ function delay(ms) {
 }
 
 /******************************************************
- * (B) Scroller la liste de conversations pour tout charger
- *     sans quitter la page.
+ * (B) Scroller la LISTE DE CONVERSATIONS (colonne de gauche)
+ *     pour tout charger
  ******************************************************/
 async function loadAllConversations() {
-  console.log("Chargement de toutes les conversations ...");
-  
-  // Hypothèse : la liste de conversations est un <div aria-label="Discussions" role="grid">
+  console.log("=== (B) CHARGEMENT DE TOUTES LES CONVERSATIONS (LISTE GAUCHE) ===");
+
+  // 1) Sélection du conteneur de la liste de conversations (colonne de gauche)
   let conversationList = document.querySelector("div[aria-label='Discussions'][role='grid']");
   if (!conversationList) {
-    console.error("Impossible de trouver la liste de conversations.");
+    console.error("Impossible de trouver la liste de conversations (colonne gauche).");
     return [];
   }
 
+  // 2) Scroll vers le bas en boucle, jusqu'à ce que plus rien ne charge
   let lastScrollHeight = 0;
   let stableTime = 0;
 
-  // On scrolle vers le bas en boucle, jusqu'à ce que ça ne charge plus
   while (true) {
     conversationList.scrollTo(0, conversationList.scrollHeight);
     await delay(500);
@@ -34,44 +34,41 @@ async function loadAllConversations() {
     } else {
       stableTime = 0;
     }
+
     if (stableTime >= 3000) {
-      // 3 secondes sans changement -> on arrête
+      // 3 secondes sans changement => on arrête
       break;
     }
     lastScrollHeight = conversationList.scrollHeight;
   }
 
-  // Maintenant, on récupère tous les éléments qui représentent une conversation
-  // Exemple : <a href="/messages/t/12345"> ou <div data-testid="mwthreadlist-item">...
-  // Ici, on suppose un <a> avec href commençant par "/messages/t/"
+  // 3) Récupérer tous les liens <a> de conversations
   let convLinks = conversationList.querySelectorAll("a[href^='/messages/t/']");
   console.log("Nombre de conversations chargées :", convLinks.length);
 
-  // On retourne un tableau (ou NodeList) de ces éléments
   return Array.from(convLinks);
 }
 
 /******************************************************
- * (C) Scroller la conversation pour charger tous les messages
- *     en restant sur la même page (scrollTop = 0).
+ * (C) Scroller la CONVERSATION (colonne de droite)
+ *     pour charger tous les messages
  ******************************************************/
-async function loadAllMessages() {
-  console.log("Chargement de tous les messages de cette conversation ...");
+async function loadAllMessagesInConversation() {
+  console.log("=== (C) CHARGEMENT DE TOUS LES MESSAGES (FENÊTRE DROITE) ===");
 
-  // Hypothèse : le conteneur de la conversation est un <div aria-label="Discussions" role="grid">
-  // (souvent le même que pour la liste, mais la partie "droite" du DOM est parfois distincte)
-  // Adaptez selon votre DOM réel (ex. "div[role='log']", etc.)
-  let conversationWindow = document.querySelector("div[aria-label='Discussions'][role='grid']");
+  // 1) Sélection du conteneur de la fenêtre de conversation (colonne de droite)
+  let conversationWindow = document.querySelector("div[aria-label^='Messages dans la conversation']");
   if (!conversationWindow) {
-    console.error("Impossible de trouver la fenêtre de conversation.");
+    console.error("Impossible de trouver la fenêtre de conversation (colonne de droite).");
     return;
   }
 
+  // 2) Scroll vers le haut en boucle, jusqu'à ce que plus rien ne charge
   let lastScrollTop = conversationWindow.scrollTop;
   let stableTime = 0;
 
-  // On scrolle vers le haut en boucle
   while (true) {
+    // On scrolle vers le haut
     conversationWindow.scrollTo(0, 0);
     await delay(500);
 
@@ -80,20 +77,31 @@ async function loadAllMessages() {
     } else {
       stableTime = 0;
     }
+
     if (stableTime >= 3000) {
+      // 3 secondes sans changement => on arrête
       break;
     }
     lastScrollTop = conversationWindow.scrollTop;
   }
-  console.log("Fin du chargement des messages.");
+
+  console.log("Fin du chargement des messages dans la conversation.");
 }
 
 /******************************************************
  * (D) Supprimer uniquement VOS messages
- *     (filtrage sur "Vous:" / "Vous avez envoyé")
- *     en restant sur la même page.
+ *     dans la conversation actuelle (colonne de droite)
  ******************************************************/
 async function deleteMyMessagesInCurrentConversation() {
+  console.log("=== (D) SUPPRESSION DE VOS MESSAGES DANS LA CONVERSATION ACTUELLE ===");
+
+  // 1) Récupérer le conteneur (colonne de droite)
+  let conversationWindow = document.querySelector("div[aria-label^='Messages dans la conversation']");
+  if (!conversationWindow) {
+    console.error("Impossible de trouver la fenêtre de conversation.");
+    return;
+  }
+
   let iteration = 0;
   while (true) {
     iteration++;
@@ -102,66 +110,75 @@ async function deleteMyMessagesInCurrentConversation() {
       break;
     }
 
-    let messages = document.querySelectorAll("div.__fb-light-mode[role='row']");
+    // 2) Sélectionner tous les messages dans la fenêtre
+    //    (Ici, par ex. "div.__fb-light-mode[role='row']")
+    //    Ajustez si nécessaire selon votre DOM
+    let messages = conversationWindow.querySelectorAll("div.__fb-light-mode[role='row']");
     if (messages.length === 0) {
-      console.log("Plus aucun message, conversation vide.");
+      console.log("Plus aucun message, conversation vide ou rien à supprimer.");
       break;
     }
 
-    console.log(`Passage n°${iteration}, nombre de messages :`, messages.length);
+    console.log(`Passage n°${iteration}, nombre de messages = ${messages.length}`);
     let anyDeleted = false;
 
-    // Parcourir du bas vers le haut
+    // 3) Parcourir du bas vers le haut (pour éviter des reflows)
     for (let i = messages.length - 1; i >= 0; i--) {
       let message = messages[i];
 
-      // Vérifier si c'est un message qui VOUS appartient
-      let txt = message.innerText.toLowerCase();
+      // a) Vérifier si c'est un message qui VOUS appartient
+      //    Ex. si "Vous avez envoyé" ou "Vous:" dans le texte
+      let txt = (message.innerText || "").toLowerCase();
       if (!txt.includes("vous avez envoyé") && !txt.includes("vous:")) {
         continue;
       }
 
-      // Survol pour faire apparaître le bouton "Plus"
+      // b) Survoler le message pour faire apparaître le bouton "Plus" (aria-label="Plus")
       message.dispatchEvent(new MouseEvent("mouseover", {
         view: window,
         bubbles: true,
         cancelable: true
       }));
-      await delay(100);
-
-      // Bouton "Plus" (aria-label="Plus")
-      let plusButton = message.querySelector("div[aria-label='Plus']");
-      if (!plusButton) continue;
-      plusButton.click();
       await delay(200);
 
-      // Chercher "Supprimer" ou "Retirer"
+      // c) Cliquer sur le bouton "Plus"
+      let plusButton = message.querySelector("div[aria-label='Plus']");
+      if (!plusButton) {
+        continue;
+      }
+      plusButton.click();
+      await delay(300);
+
+      // d) Dans le menu qui apparaît, chercher "Supprimer" ou "Retirer"
       let menuItems = document.querySelectorAll("div[role='menuitem']");
-      let firstDeleteBtn = null;
+      let deleteBtn = null;
       menuItems.forEach(item => {
         let t = (item.innerText || "").toLowerCase();
         if (t.includes("supprimer") || t.includes("retirer")) {
-          firstDeleteBtn = item;
+          deleteBtn = item;
         }
       });
-      if (!firstDeleteBtn) continue;
-      firstDeleteBtn.click();
+      if (!deleteBtn) {
+        continue;
+      }
+      deleteBtn.click();
       await delay(500);
 
-      // Sélection du bouton radio (value="1")
+      // e) Messenger demande parfois de choisir "supprimer pour vous" vs "supprimer pour tout le monde"
+      //    => On coche "supprimer pour tout le monde" (value="1") ou autre
       let secondRadio = document.querySelector('input[type="radio"][value="1"]');
       if (secondRadio) {
         secondRadio.click();
         await delay(200);
       }
 
-      // Bouton "Supprimer" dans la pop-up
+      // f) Bouton "Supprimer" final dans la pop-up
       let secondDeleteBtn = Array.from(document.querySelectorAll("div[aria-label='Supprimer']"))
         .find(btn => !btn.hasAttribute("aria-disabled"));
       if (secondDeleteBtn) {
         secondDeleteBtn.click();
         anyDeleted = true;
-        await delay(300);
+        await delay(500);
       }
     }
 
@@ -169,43 +186,45 @@ async function deleteMyMessagesInCurrentConversation() {
       console.log("Aucun message supprimé lors de ce passage, on arrête.");
       break;
     }
+    // Petite pause avant de retenter un nouveau passage
     await delay(1000);
   }
 }
 
-
 /******************************************************
- * (E) Parcourir toutes les conversations dans la même page
+ * (E) Tout enchaîner : supprimer VOS messages dans TOUTES les conv
  ******************************************************/
 async function deleteAllMyMessagesInAllConversations() {
-  // 1) Charger toutes les conversations (scroll)
+  console.log("=== (E) SUPPRIMER VOS MESSAGES DANS TOUTES LES CONVERSATIONS ===");
+
+  // 1) Charger la liste de conversations (colonne gauche)
   let convLinks = await loadAllConversations();
   console.log("Liste des conversations trouvées :", convLinks.length);
 
   // 2) Parcourir chaque conversation
   for (let i = 0; i < convLinks.length; i++) {
     let link = convLinks[i];
-    console.log(`Conversation n°${i + 1} : on clique sur`, link);
+    console.log(`\n--- Conversation n°${i + 1}/${convLinks.length} : on clique sur`, link.href);
 
-    // (a) Cliquer sur la conversation pour l’ouvrir
+    // a) Cliquer sur la conversation pour l’ouvrir (colonne de droite)
     link.click();
-    // (b) Attendre un peu
+
+    // b) Attendre un peu le chargement
     await delay(2000);
 
-    // (c) Charger tous les messages (scroll vers le haut)
-    await loadAllMessages();
+    // c) Scroller tous les messages (colonne de droite)
+    await loadAllMessagesInConversation();
 
-    // (d) Supprimer vos messages
+    // d) Supprimer vos messages
     await deleteMyMessagesInCurrentConversation();
 
-    // (e) Retrouver la liste de conversations dans le DOM
-    //     car parfois Messenger reconstruit le DOM
-    //     On retient le convLinks[i+1] qu’on doit cliquer
-    //     Mais ce n’est plus le même objet DOM => On doit le re-sélectionner
-    //     OU on retente "loadAllConversations()" pour tout recharger
+    // e) Retour à la liste de conversations
+    //    => Messenger recharge parfois la liste => re-sélection
     convLinks = await loadAllConversations();
-    // S’il n’y a plus de conv ou si i+1 >= convLinks.length, on arrête la boucle
-    if (i + 1 >= convLinks.length) break;
+    if (i + 1 >= convLinks.length) {
+      console.log("Plus de conversation suivante, on arrête la boucle.");
+      break;
+    }
   }
 
   console.log("Terminé : toutes les conversations ont été traitées.");
