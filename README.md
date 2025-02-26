@@ -36,7 +36,7 @@ Ce script permet de **supprimer uniquement vos messages** (et non ceux de l’au
    - Pour **Seulement** la conversations ouverte :
     ```js
      deleteMyMessagesInCurrentConversation();
-   ```
+    ```
     
 5. **Ne touchez plus la souris** pendant l’exécution : le script va cliquer automatiquement sur les éléments nécessaires.  
 6. **Surveillez la console** : vous verrez le nombre de messages, les passages successifs, etc.
